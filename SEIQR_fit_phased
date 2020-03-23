@@ -82,7 +82,7 @@ if __name__ == '__main__':
             a * E - (g + d) * I,
             a * E,
             d * I - e * Q,
-            g * I + e *     Q + k * E
+            g * I + e * Q + k * E
         ]
 
 
@@ -143,7 +143,7 @@ if __name__ == '__main__':
              max(betas[index_order]) + .2)
     plt.yscale("linear")
 
-    ax3 = fig.add_subplot(gs[:2, 1])
+    ax3 = fig.add_subplot(gs[2, 1])
     start = 1
     end = 180
     times = []
@@ -152,9 +152,20 @@ if __name__ == '__main__':
                                      np.arange(start, end), times,
                                      betas)
 
-    mpl.style.use('seaborn')
+    ax3.plot(sol_ivp2.t, sol_ivp2.y[0], 'g-', label="Susceptible")
+    ax3.plot(sol_ivp2.t, sol_ivp2.y[1], 'y-', label="Exposed")
+    ax3.plot(sol_ivp2.t, sol_ivp2.y[2], 'r-', label="Infected")
+    ax3.plot(sol_ivp2.t, sol_ivp2.y[4], 'k-', label="Quarantine")
+    ax3.plot(sol_ivp2.t, sol_ivp2.y[5], 'b-', label="Recovered")
+    # plt.plot(x_data, y_cumulated_data, "k*:", label="SPF")
+    plt.grid("True")
+    plt.ylabel("Population")
+    plt.xlabel("Days since first infection")
+    plt.legend()
 
-    ax3.plot(sol_ivp2.t, sol_ivp2.y[2], '-', label="Infected active simulated")
+    ax4 = fig.add_subplot(gs[:2, 1])
+
+    ax4.plot(sol_ivp2.t, sol_ivp2.y[2], 'r-', label="Infected")
     # plt.plot(x_data, y_cumulated_data, "k*:", label="SPF")
     plt.grid("True")
     plt.ylabel("Population")
