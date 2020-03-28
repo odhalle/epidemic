@@ -1,0 +1,94 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import solve_ivp
+from scipy import stats
+import matplotlib as mpl
+
+if __name__ == '__main__':
+    ######################
+    # DATA and supposition
+    ######################
+
+    beta = 2.5
+    alpha = 1. / 5.
+    gamma = 1. / 5.
+    N = 100000.
+    initial_exposed = 0.
+    init_values = [N, initial_exposed, 1., 0.]
+    prob1 = stats.norm.pdf(np.arange(0, 140, 1), 50., 15)
+    prob2 = stats.norm.pdf(np.arange(0, 140, 1), 50., 15)
+
+    #plt.plot(prob)
+    #plt.show()
+
+
+    def base_seir_model(init_vals, params, t):
+        S_0, E_0, I_0, R_0 = init_vals
+        S, E, I, R = [S_0], [E_0], [I_0], [R_0]
+        sigma, beta, gamma = params
+        dt = t[1] - t[0]
+        E_j = np.zeros(140)
+        I_j = np.zeros(140)
+        I_j[0] = I_0
+        for _ in t[1:]:
+            next_S = S[-1] - (beta * S[-1] * I[-1] / N) * dt
+            next_E = E[-1] + ((beta * S[-1] * I[-1]/N) * dt - np.sum(prob1 * E_j)) # * dt
+            next_I = I[-1] + (np.sum(prob1 * E_j) - np.sum(prob2 * I_j)) # * dt
+            next_R = R[-1] + (np.sum(prob2 * I_j)) # * dt
+            S.append(next_S)
+            E.append(next_E)
+            I.append(next_I)
+            R.append(next_R)
+            print((beta * S[-1] * I[-1] / N) * dt)
+            E_j = np.insert(E_j, 0, (beta * S[-1] * I[-1]/N) * dt)
+            E_j = np.delete(E_j, -1)
+            I_j = np.insert(I_j, 1, np.sum(prob1 * E_j))
+            I_j = np.delete(I_j, -1)
+            #print(np.sum(prob * E_j))
+        return [np.stack(S).T, np.stack(E).T, np.stack(I).T, np.stack(R).T]
+
+
+    def SEIR(t, y, parameters):
+        """
+        :param t: time range
+        :param y: initial conditions
+        :param parameters: parameters
+        :return:
+        """
+        a, b, g = parameters
+        # initial conditions
+        S = y[0]
+        E = y[1]
+        I = y[2]
+        R = y[3]
+        return [
+            -b * S * (E + I) / N,
+            b * S * (E + I) / N - a * E,
+            a * E - g * I,
+            g * I
+        ]
+
+
+    def solve_ivp_seir_model(init_vals, params, t):
+        return solve_ivp(SEIR, [t[0], t[-1]], init_vals, args=[params], t_eval=t, max_step=.1, vectorized=True)
+
+
+    sol_ivp = solve_ivp_seir_model(init_values, [alpha, beta, gamma], np.arange(0, 80, .1))
+
+    S, E, I, R = base_seir_model(init_values, [alpha, beta, gamma], np.arange(0, 80, .1))
+
+    mpl.style.use('seaborn')
+
+    plt.plot(sol_ivp.t, sol_ivp.y[0], '--', label="S")
+    plt.plot(sol_ivp.t, sol_ivp.y[1], '--', label="E")
+    plt.plot(sol_ivp.t, sol_ivp.y[2], '--', label="I")
+    plt.plot(sol_ivp.t, sol_ivp.y[3], '--', label="R")
+    plt.plot(np.arange(0, 80., .1), S, '-', label="S2")
+    plt.plot(np.arange(0, 80., .1), E, '-', label="E2")
+    plt.plot(np.arange(0, 80., .1), I, '-', label="I2")
+    plt.plot(np.arange(0, 80., .1), R, '-', label="R2")
+    plt.grid("True")
+    plt.ylabel("Population")
+    plt.xlabel("Time")
+    plt.legend()
+    plt.show()

@@ -10,36 +10,28 @@ if __name__ == '__main__':
     ######################
 
     beta = .5
-    alpha = (1. / 5.) * (1. / 5.2)  # 5.2 is the mean incubation latency
-    gamma = (0.1) * (1. / 18.)  # 2.5 is the supposed time for contagion
+    alpha = (1. / 4.) * (1. / 5.2)  # 5.2 is the mean incubation latency
+    gamma = (0.1)*(1. / 18.)  # 2.5 is the supposed time for contagion
     epsilon = (1. / 1.) * (1. / 17.)
     delta = (0.9) * (1.)
-    kappa = (4. / 5.) * (1. / 5.2)  # 5.2 is the mean incubation latency
+    kappa = (3. / 4.) * (1. / 5.2)  # 5.2 is the mean incubation latency
     # Total Belgian population
     N = 10000000.
     # days since first infection
-    x_data = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29])
+    x_data = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26])
     # infection cases SPF
     y_data = np.array(
-        [0, 1, 6, 5, 10, 27, 59, 60, 31, 39, 28, 47, 85, 160, 133, 197, 172, 185, 243, 309, 426, 558, 586, 342, 526,
-         668, 1298, 1049, 1850])
+        [0, 1, 6, 5, 10, 27, 59, 60, 31, 39, 28, 47, 85, 160, 133, 197, 172, 185, 243, 309, 426, 558, 586, 342, 526, 668])
     y_cumulated_data = np.cumsum(y_data)
-    # Sciensano décès
-    death_data = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 1, 0, 1, 5, 4, 7, 16, 30, 8, 13, 34, 56, 42, 69, 64])
-    death_cumulated_data = np.cumsum(death_data)
-    letal_rate = .01
-    icu_data = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 24, 33, 52, 79, 100, 130, 164, 238, 290, 322, 381, 474, 605, 690, 789])
-    icu_rate = .15
-    # This unknown parameter does a lot for the first beta but nearly nothing for the others as free parameters....
-    initial_exposed = 30.
+    # This unknown parameter does a lot....
+    initial_exposed = 40.
     # Curve fit from index to index (range on which the residual is computed)
     from_index = 0
-    until_index = 29
+    until_index = 26
     end_phase1 = 8
-    end_phase2 = 17
-    end_phase3 = 29
+    end_phase2 = 21
+    end_phase3 = 26
     init_values = [N, initial_exposed, 1., 1., 0., 0.]
-
 
 
     def beta_per_phase(t, b1, b2, b3, b4, slope_time):
@@ -85,8 +77,8 @@ if __name__ == '__main__':
         Q = y[4]
         R = y[5]
         return [
-            -b * S * (E + I) / N,
-            b * S * (E + I) / N - a * E - k * E,
+            -b * S * (E + I) / float(N),
+            b * S * (E + I) / float(N) - a * E - k * E,
             a * E - (g + d) * I,
             a * E,
             d * I - e * Q,
@@ -105,8 +97,7 @@ if __name__ == '__main__':
     def residual(params, init):
         solution = solve_ivp(SEIQR, [x_data[0], x_data[-1]], init, args=(params, [], []), t_eval=x_data, max_step=.1)
         v = solution.y[3]
-        return np.multiply((v[from_index:until_index] - y_cumulated_data[from_index:until_index]),
-                           x_data[from_index:until_index])  # / (v[from_index:until_index])
+        return np.multiply((v[from_index:until_index] - y_cumulated_data[from_index:until_index]), x_data[from_index:until_index]) # / (v[from_index:until_index])
 
 
     res1 = least_squares(residual, [alpha, beta, beta, beta, beta, gamma, delta, epsilon, kappa], args=[init_values],
@@ -127,20 +118,16 @@ if __name__ == '__main__':
     gs = fig.add_gridspec(nrows=3, ncols=2)
 
     ax1 = fig.add_subplot(gs[:2, 0])
-    ax1.plot(sol_ivp.t, sol_ivp.y[3], '-', label="Infected cases cumul. simulated", color="lightcoral")
-    ax1.plot(x_data, y_cumulated_data, "o:", label="SPF", color="lightcoral")
-    ax1.plot(sol_ivp.t, sol_ivp.y[4]*icu_rate, "-", label="ICU estimation", color="darkorange")
-    ax1.plot(x_data, icu_data, "o", label="ICU data Sciensano", color="darkorange")
-    ax1.plot(sol_ivp.t, sol_ivp.y[5]*letal_rate, "k-", "Death simulated", color="dimgray")
-    ax1.plot(x_data, death_cumulated_data, "ko", label="Death Sciensano", color="dimgray")
+    ax1.plot(sol_ivp.t, sol_ivp.y[3], '-', label="Infected cases cumul. simulated")
+    ax1.plot(x_data, y_cumulated_data, "ko:", label="SPF")
     plt.grid("True")
     plt.xticks(x_data)
     plt.ylabel("Population")
     plt.xlabel("Days since first infection")
     plt.legend()
     plt.suptitle(
-        "SEIR model on SPF data sigma=%.2f, beta1=%.2f, beta2=%.2f, beta3=%.2f, gamma=%.2f, delta=%.2f, epsilon=%.2f, kappa=%.2f" % (
-            alpha, beta1, beta2, beta3, gamma, delta, epsilon, kappa))
+        "SEIR model on SPF data sigma=%.2f, beta1=%.2f, beta2=%.2f, gamma=%.2f, delta=%.2f, epsilon=%.2f, kappa=%.2f" % (
+            alpha, beta1, beta2, gamma, delta, epsilon, kappa))
 
     times = np.array(times)
     index_order = np.argsort(times)
@@ -178,7 +165,7 @@ if __name__ == '__main__':
 
     ax4 = fig.add_subplot(gs[:2, 1])
 
-    ax4.plot(sol_ivp2.t, sol_ivp2.y[2], '-', label="Infected", color="lightcoral")
+    ax4.plot(sol_ivp2.t, sol_ivp2.y[2], 'r-', label="Infected")
     # plt.plot(x_data, y_cumulated_data, "k*:", label="SPF")
     plt.grid("True")
     plt.ylabel("Population")
